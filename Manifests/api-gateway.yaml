@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+    spec:
+      containers:
+      - name: api-gateway
+        # Replace with your Docker Hub image
+        image: YOUR_DOCKERHUB_USERNAME/api-gateway:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: INVENTORY_SERVICE_URL
+          value: http://inventory-app:8080
+        - name: BILLING_SERVICE_URL
+          value: http://billing-app:8080
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-gateway
+spec:
+  selector:
+    app: api-gateway
+  ports:
+  - port: 3000
+    targetPort: 3000
+    name: http
+
