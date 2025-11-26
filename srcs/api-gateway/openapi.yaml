@@ -1,0 +1,353 @@
+# Swagger/OpenAPI: A standard way to describe your APIs. Lets you generate interactive docs (Swagger UI) and share/test endpoints easily.
+# https://editor.swagger.io/  --> you'll get interactive docs where you can try endpoints
+openapi: 3.1.0
+info:
+  title: CRUD Master API Gateway
+  description: |
+    API Gateway for the CRUD Master microservices infrastructure.
+    This gateway routes requests to the Inventory API (HTTP) and Billing API (RabbitMQ).
+    
+    ## Architecture
+    - **Inventory API**: Handles movie inventory CRUD operations via HTTP proxy
+    - **Billing API**: Processes payment orders via RabbitMQ message queue
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: http://gateway-vm:3000
+    description: Gateway VM server
+
+tags:
+  - name: Movies
+    description: Movie inventory management operations
+  - name: Billing
+    description: Order and billing operations
+
+paths:
+  /api/movies:
+    get:
+      tags:
+        - Movies
+      summary: Retrieve all movies
+      description: |
+        Get a list of all movies in the inventory. Optionally filter by title using query parameter.
+      parameters:
+        - name: title
+          in: query
+          description: Filter movies by title (case-insensitive partial match)
+          required: false
+          schema:
+            type: string
+          example: inception
+      responses:
+        '200':
+          description: Successful response with list of movies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Movie'
+              example:
+                - id: 1
+                  title: "Inception"
+                  description: "A mind-bending thriller"
+                - id: 2
+                  title: "Interstellar"
+                  description: "Epic space adventure"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Movies
+      summary: Create a new movie
+      description: Add a new movie to the inventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieInput'
+            example:
+              title: "The Matrix"
+              description: "A computer hacker learns about the true nature of reality"
+      responses:
+        '201':
+          description: Movie created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '400':
+          description: Bad request - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Movies
+      summary: Delete all movies
+      description: Remove all movies from the inventory
+      responses:
+        '200':
+          description: All movies deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "5 movies deleted"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/movies/{id}:
+    get:
+      tags:
+        - Movies
+      summary: Retrieve a movie by ID
+      description: Get a single movie by its unique identifier
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Movie found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Movie'
+        '404':
+          description: Movie not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Movies
+      summary: Update a movie by ID
+      description: Update an existing movie's information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: integer
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieInput'
+            example:
+              title: "Inception (Updated)"
+              description: "Updated description"
+      responses:
+        '200':
+          description: Movie updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Movie updated"
+        '404':
+          description: Movie not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Movies
+      summary: Delete a movie by ID
+      description: Remove a specific movie from the inventory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Movie ID
+          schema:
+            type: integer
+          example: 1
+      responses:
+        '200':
+          description: Movie deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Movie deleted"
+        '404':
+          description: Movie not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/billing:
+    post:
+      tags:
+        - Billing
+      summary: Create a new order
+      description: |
+        Send an order to the billing queue via RabbitMQ. The order will be processed asynchronously.
+        The gateway will return success immediately, even if the billing service is not running.
+        When the billing service starts, it will process all queued messages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInput'
+            example:
+              user_id: "3"
+              number_of_items: "5"
+              total_amount: "180"
+      responses:
+        '200':
+          description: Order sent to billing queue successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Order sent to billing queue."
+        '500':
+          description: Failed to send message to RabbitMQ
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: string
+                    example: "Connection refused"
+
+components:
+  schemas:
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Auto-generated unique identifier
+          example: 1
+        title:
+          type: string
+          description: Movie title
+          example: "Inception"
+        description:
+          type: string
+          description: Movie description
+          example: "A mind-bending thriller"
+      required:
+        - id
+        - title
+
+    MovieInput:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Movie title
+          example: "The Matrix"
+        description:
+          type: string
+          description: Movie description
+          example: "A computer hacker learns about the true nature of reality"
+      required:
+        - title
+
+    OrderInput:
+      type: object
+      properties:
+        user_id:
+          type: string
+          description: ID of the user making the order
+          example: "3"
+        number_of_items:
+          type: string
+          description: Number of items in the order
+          example: "5"
+        total_amount:
+          type: string
+          description: Total cost of the order
+          example: "180"
+      required:
+        - user_id
+        - number_of_items
+        - total_amount
+
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Error message
+          example: "Movie not found"
+

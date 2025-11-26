@@ -13,24 +13,30 @@ spec:
         app: api-gateway
     spec:
       containers:
-      - name: api-gateway
-        # Replace with your Docker Hub image
-        image: YOUR_DOCKERHUB_USERNAME/api-gateway:latest
-        ports:
-        - containerPort: 3000
-          name: http
-        env:
-        - name: INVENTORY_SERVICE_URL
-          value: http://inventory-app:8080
-        - name: BILLING_SERVICE_URL
-          value: http://billing-app:8080
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
+        - name: api-gateway
+          image: mrazem/api-gateway:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: API_PORT
+              value: "3000"
+            - name: INVENTORY_API_URL
+              value: http://inventory-app:8080
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rabbitmq-secret
+                  key: RABBITMQ_URL
+            - name: QUEUE_NAME
+              value: "billing_queue"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -40,7 +46,6 @@ spec:
   selector:
     app: api-gateway
   ports:
-  - port: 3000
-    targetPort: 3000
-    name: http
-
+    - port: 3000
+      targetPort: 3000
+      name: http

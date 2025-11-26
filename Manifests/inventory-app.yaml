@@ -14,8 +14,7 @@ spec:
     spec:
       containers:
       - name: inventory-app
-        # Replace with your Docker Hub image
-        image: YOUR_DOCKERHUB_USERNAME/inventory-app:latest
+        image: mrazem/inventory-app:latest
         ports:
         - containerPort: 8080
           name: http
@@ -58,4 +57,3 @@ spec:
   - port: 8080
     targetPort: 8080
     name: http
-
