@@ -13,4 +13,4 @@ EXPOSE 8080
 ENV PORT=8080
 ENV INVENTORY_PORT=8080
 
-CMD ["node", "index.js"]
+CMD ["node", "server.js"]
